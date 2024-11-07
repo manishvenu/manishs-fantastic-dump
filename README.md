@@ -31,11 +31,6 @@ This extension does not require any specific settings.
 
 - Requires VS Code version 1.50 or above.
 
-## Change Log
-
-### [0.01 - 0.0.3] - 2024-11-03
-- A variety of initial release things.
-
 ## Contributing
 
 Contributions are welcome! Let me know! It's not serious!
