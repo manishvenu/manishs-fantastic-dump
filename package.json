@@ -1,10 +1,11 @@
 {
   "name": "manishsfantasticdump",
-  "displayName": "manishsfantasticdump",
-  "description": "ncdump -h netcdf files",
-  "version": "0.0.1",
+  "displayName": "Manish's Fantastic Dump",
+  "publisher": "ManishVenumuddula",
+  "description": "Run 'ncdump -h' on '.nc' files for accessibility in VSCode.",
+  "version": "0.0.3",
   "engines": {
-    "vscode": "^1.95.0"
+    "vscode": "^1.50.0"
   },
   "categories": [
     "Other"
@@ -35,7 +36,7 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.95.0",
+    "@types/vscode": "^1.50.0",
     "@types/mocha": "^10.0.9",
     "@types/node": "20.x",
     "@typescript-eslint/eslint-plugin": "^8.10.0",

@@ -39,7 +39,7 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 			webviewPanel.webview.html = `<pre>${ncdumpOutput}</pre>`;
 			// Get the file name from the document URI without the full path
 			const fileName = path.basename(document.uri.fsPath); // This gives you just the file name
-			const statusBarMessage = vscode.window.setStatusBarMessage(`Refreshed: ${fileName}`, 2000); // Show for 2 seconds
+			const statusBarMessage = vscode.window.setStatusBarMessage(`Loaded: ${fileName}`, 1000); // Show for 2 seconds
 		};
 
 		// Run ncdump initially
