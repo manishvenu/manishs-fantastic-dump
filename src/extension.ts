@@ -2,7 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import * as path from 'path';
-
+import * as fs from 'fs';
 
 
 import { exec } from 'child_process';
@@ -13,12 +13,13 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.window.registerCustomEditorProvider('netcdf.viewer', provider, {
 			webviewOptions: { retainContextWhenHidden: true },
-			supportsMultipleEditorsPerDocument: false,
+			supportsMultipleEditorsPerDocument: false
 		})
 	);
 }
 
 class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
+
 	async openCustomDocument(
 		uri: vscode.Uri,
 		_openContext: vscode.CustomDocumentOpenContext,
@@ -35,8 +36,17 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 		webviewPanel.webview.options = { enableScripts: true };
 
 		const updateWebview = async () => {
-			const ncdumpOutput = await runNcdump(document.uri.fsPath);
-			webviewPanel.webview.html = `<pre>${ncdumpOutput}</pre>`;
+			let ncdumpOutput = await runNcdump(document.uri.fsPath);
+			// Wrap variable names in spans with the class 'variable'
+            ncdumpOutput = ncdumpOutput.replace(/(\b\w+\b)(?=\s*\(\w+\)\s*;)/g, '<span class="variable">$1</span>');
+			        // Read the HTML file
+        const htmlFilePath = "/Users/manishrv/manishs-fantastic-dump/src/NetCDFViewer.html";
+        let htmlContent = fs.readFileSync(htmlFilePath, 'utf8');
+
+        // Replace the placeholder with the actual content
+        htmlContent = htmlContent.replace('<pre id="content"></pre>', `<pre id="content">${ncdumpOutput}</pre>`);
+
+        webviewPanel.webview.html = htmlContent;
 			// Get the file name from the document URI without the full path
 			const fileName = path.basename(document.uri.fsPath); // This gives you just the file name
 			const statusBarMessage = vscode.window.setStatusBarMessage(`Loaded: ${fileName}`, 1000); // Show for 2 seconds
@@ -61,7 +71,38 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 		});
 
 		webviewPanel.onDidDispose(() => watcher.dispose());
+		    // Handle messages from the webview
+			webviewPanel.webview.onDidReceiveMessage(async message => {
+				switch (message.command) {
+					case 'variableClick':
+						const variableOutput = await runNcdumpVariable(document.uri.fsPath, message.variableName);
+						const newPanel = vscode.window.createWebviewPanel(
+							'netcdfVariableViewer',
+							`Variable: ${message.variableName}`,
+							vscode.ViewColumn.Beside,
+							{ enableScripts: true }
+						);
+						newPanel.webview.html = `
+							<!DOCTYPE html>
+							<html lang="en">
+							<head>
+								<meta charset="UTF-8">
+								<meta name="viewport" content="width=device-width, initial-scale=1.0">
+								<title>Variable: ${message.variableName}</title>
+								<style>
+									pre { white-space: pre-wrap; }
+								</style>
+							</head>
+							<body>
+								<pre>${variableOutput}</pre>
+							</body>
+							</html>
+						`;
+						break;
+				}
+			});
 	}
+	
 }
 
 // Helper function to run ncdump -h
@@ -75,6 +116,21 @@ function runNcdump(filePath: string): Promise<string> {
 			}
 		});
 	});
+}
+
+
+async function runNcdumpVariable(filePath: string, variableName: string): Promise<string> {
+    const { exec } = require('child_process');
+    return new Promise((resolve, reject) => {
+        exec(`ncdump -v ${variableName} ${filePath}`, (error: any, stdout: string, stderr: string) => {
+            if (error) {
+                reject(`Error: ${stderr}`);
+            } else {
+                const dataSection = stdout.split('data:')[1]?.trim() || '';
+                resolve(dataSection);
+            }
+        });
+    });
 }
 
 // This method is called when your extension is deactivated
