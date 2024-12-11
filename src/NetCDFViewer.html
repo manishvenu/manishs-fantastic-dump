@@ -6,12 +6,6 @@
     <title>NetCDF Viewer</title>
     <style>
         pre { white-space: pre-wrap; }
-        .highlight {
-            background-color: rgba(173, 216, 230, 0.5); /* Light blue with transparency */
-            padding: 0 5px;
-            border-radius: 3px;
-        }
-        #search { display: none; }
         .variable {
             cursor: pointer;
             color: #007acc; /* Text color */
@@ -23,49 +17,7 @@
     </style>
 </head>
 <body>
-    <input type="text" id="search" placeholder="Find..." />
     <pre id="content"></pre>
-    <script>
-        const vscode = acquireVsCodeApi();
-        const searchInput = document.getElementById('search');
-        let contentElement = document.getElementById('content');
 
-        function addVariableClickListeners() {
-            document.querySelectorAll('.variable').forEach(element => {
-                element.addEventListener('click', (event) => {
-                    const variableName = event.target.textContent.trim();
-                    vscode.postMessage({ command: 'variableClick', variableName });
-                });
-            });
-        }
-
-        function highlightSearchTerm(term) {
-            const regex = new RegExp(term, 'gi');
-            const originalText = contentElement.textContent;
-            const highlightedText = originalText.replace(regex, match => `<span class="highlight">${match}</span>`);
-            contentElement.innerHTML = highlightedText;
-            addVariableClickListeners(); // Reattach event listeners
-        }
-
-        document.addEventListener('keydown', (event) => {
-            if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
-                event.preventDefault();
-                searchInput.style.display = 'block';
-                searchInput.focus();
-            } else if (event.key === 'Escape') {
-                searchInput.style.display = 'none';
-                searchInput.value = '';
-                contentElement.innerHTML = contentElement.textContent; // Remove highlights
-                addVariableClickListeners(); // Reattach event listeners
-            }
-        });
-
-        searchInput.addEventListener('input', () => {
-            const searchTerm = searchInput.value;
-            highlightSearchTerm(searchTerm);
-        });
-
-        addVariableClickListeners(); // Initial attachment of event listeners
-    </script>
 </body>
 </html>
