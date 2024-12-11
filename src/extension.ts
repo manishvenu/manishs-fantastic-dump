@@ -40,7 +40,8 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 			// Wrap variable names in spans with the class 'variable'
 			ncdumpOutput = ncdumpOutput.replace(/(\b\w+\b)(?=\()/g, '<span class="variable">$1</span>');
 			// Read the HTML file
-			const htmlFilePath = "/home/manishrv/manishsfantasticdump/src/NetCDFViewer.html";
+
+			const htmlFilePath = path.join(__dirname, '..', 'src', 'NetCDFViewer.html');
 			let htmlContent = fs.readFileSync(htmlFilePath, 'utf8');
 
 			// Replace the placeholder with the actual content
