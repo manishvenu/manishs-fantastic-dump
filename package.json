@@ -3,7 +3,7 @@
   "displayName": "Manish's Fantastic Dump",
   "publisher": "ManishVenumuddula",
   "description": "Run 'ncdump -h' on '.nc' files for accessibility in VSCode.",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "engines": {
     "vscode": "^1.50.0"
   },

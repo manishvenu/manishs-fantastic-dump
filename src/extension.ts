@@ -41,9 +41,58 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 			ncdumpOutput = ncdumpOutput.replace(/(\b\w+\b)(?=\()/g, '<span class="variable">$1</span>');
 			// Read the HTML file
 
-			const htmlFilePath = path.join(__dirname, '..', 'src', 'NetCDFViewer.html');
-			let htmlContent = fs.readFileSync(htmlFilePath, 'utf8');
+			//const htmlFilePath = path.join(__dirname, '..', 'src', 'NetCDFViewer.html');
+			//let htmlContent = fs.readFileSync(htmlFilePath, 'utf8');
+			let htmlContent = `<!DOCTYPE html>
+								<html lang="en">
 
+								<head>
+									<meta charset="UTF-8">
+									<meta name="viewport" content="width=device-width, initial-scale=1.0">
+									<title>NetCDF Viewer</title>
+									<style>
+										pre {
+											white-space: pre-wrap;
+										}
+
+										.variable {
+											cursor: pointer;
+											color: #007acc;
+											/* Text color */
+											text-decoration: underline;
+											/* Underline text to resemble a link */
+											background-color: transparent;
+											/* No background color */
+											border-radius: 0;
+											/* No border radius */
+											padding: 0;
+											/* No padding */
+											font-size: inherit;
+											/* Inherit font size from parent */
+										}
+									</style>
+								</head>
+
+								<body>
+									<pre id="content"></pre>
+									<script>
+										const vscode = acquireVsCodeApi();
+
+
+										function addVariableClickListeners() {
+											document.querySelectorAll('.variable').forEach(element => {
+												element.addEventListener('click', (event) => {
+													const variableName = event.target.textContent.trim();
+													vscode.postMessage({ command: 'variableClick', variableName });
+												});
+											});
+										}
+
+										addVariableClickListeners(); // Initial attachment of event listeners
+									</script>
+								</body>
+
+								</html>`;
 			// Replace the placeholder with the actual content
 			htmlContent = htmlContent.replace('<pre id="content"></pre>', `<pre id="content">${ncdumpOutput}</pre>`);
 
