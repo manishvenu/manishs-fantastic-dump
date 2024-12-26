@@ -126,7 +126,7 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 			switch (message.command) {
 				case 'variableClick':
 					try {
-						const variableOutput = await runNcdumpVariable(document.uri.fsPath, message.variableName);
+						const variableOutput = await runNcdumpVariable(document.uri.fsPath, message.variableName, false);
 						const newPanel = vscode.window.createWebviewPanel(
 							'netcdfVariableViewer',
 							`Variable: ${message.variableName}`,
@@ -150,9 +150,36 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 								</html>
 							`;
 					} catch (error) {
-						console.error('Error handling variable click:', error);
-						vscode.window.showErrorMessage(`Error: Too large to load!`);
-						webviewPanel.webview.postMessage({ command: 'showError', message: 'The variable output is too large to load.' });
+						try {
+							vscode.window.showWarningMessage(`MFD Warning: Large Variable -> Only ~500 lines loaded!`);
+							const variableOutput = await runNcdumpVariable(document.uri.fsPath, message.variableName, true);
+							const newPanel = vscode.window.createWebviewPanel(
+								'netcdfVariableViewer',
+								`Variable: ${message.variableName}`,
+								vscode.ViewColumn.Beside,
+								{ enableScripts: true }
+							);
+							newPanel.webview.html = `
+									<!DOCTYPE html>
+									<html lang="en">
+									<head>
+										<meta charset="UTF-8">
+										<meta name="viewport" content="width=device-width, initial-scale=1.0">
+										<title>Variable: ${message.variableName}</title>
+										<style>
+											pre { white-space: pre-wrap; }
+										</style>
+									</head>
+									<body>
+										<pre>${variableOutput}</pre>
+									</body>
+									</html>
+								`;
+						} catch (error) {
+							console.error('Error handling variable click:', error);
+							vscode.window.showErrorMessage(`MFD Error: Too slow to load!`);
+							webviewPanel.webview.postMessage({ command: 'showError', message: 'The variable output is too large to load.' });
+						}
 					}
 
 					break;
@@ -176,10 +203,20 @@ function runNcdump(filePath: string): Promise<string> {
 }
 
 
-async function runNcdumpVariable(filePath: string, variableName: string): Promise<string> {
+async function runNcdumpVariable(
+	filePath: string,
+	variableName: string,
+	limitOutput: boolean = false
+): Promise<string> {
 	const { exec } = require('child_process');
 	return new Promise((resolve, reject) => {
-		exec(`ncdump -v ${variableName} ${filePath}`, (error: any, stdout: string, stderr: string) => {
+		// Adjust the command to include piping correctly
+		const baseCommand = `ncdump -v ${variableName} ${filePath}`;
+		const bigFileBaseCommand = `ncdump -v ${variableName} ${filePath} | head -n 500`;
+		// const command = limitOutput ? `${baseCommand} | head -n 100` : baseCommand;
+		const command = limitOutput ? bigFileBaseCommand : baseCommand;
+
+		exec(command, { shell: '/bin/bash' }, (error: any, stdout: string, stderr: string) => {
 			if (error) {
 				reject(`Error: ${stderr}`);
 			} else {
@@ -189,6 +226,9 @@ async function runNcdumpVariable(filePath: string, variableName: string): Promis
 		});
 	});
 }
+
+
+
 
 // This method is called when your extension is deactivated
 export function deactivate() { }
