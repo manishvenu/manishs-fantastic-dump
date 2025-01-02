@@ -11,17 +11,19 @@ Thanks to ChatGPT for the code ofc!
 ## Features
 
 - **Automatic ncdump Execution**: Automatically runs `ncdump -h` when you open NetCDF files (`.nc`).
-- **Live Refresh**: Refreshes the output as the NetCDF files change or are replaced.
+- **Auto-launch ncview**: On left click, the option to open ncview pops up, which runs `ncview <file>` on the `.nc` file
+- **Live Refresh**: Refreshes the output as the NetCDF files change or are replaced (Ncview does not).
 - **Lightweight**: Designed to be not big.
 
 
-## Demo
+## Demo (Doesn't show ncview connection)
 [Watch the Demo Video!](https://www.youtube.com/watch?v=qupHdyMKcIg) <!-- Replace with the actual URL of our demo video -->
 
-## Requirements
+## Requirements/Limitations
 
 - VS Code 1.50 and above (so like every version works)
 - `ncdump` installed on your system
+- `ncview` installed on your system
 
 ## Extension Settings
 
