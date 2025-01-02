@@ -2,6 +2,9 @@
 
 All notable changes to the "manishsfantasticdump" extension will be documented in this file.
 
+### [0.09] - 2024-12-26
+- Open Ncview in a new terminal window on left click.
+
 ### [0.08] - 2024-12-26
 - Large variable loading (Only 500 lines)
 

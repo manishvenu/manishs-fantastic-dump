@@ -3,6 +3,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as child_process from 'child_process';
 
 
 import { exec } from 'child_process';
@@ -16,6 +17,30 @@ export function activate(context: vscode.ExtensionContext) {
 			supportsMultipleEditorsPerDocument: false
 		})
 	);
+	let disposable = vscode.commands.registerCommand('extension.openInNcview', async (uri: vscode.Uri) => {
+		const filePath = uri.fsPath;
+
+		try {
+			// Check if ncview is installed
+			child_process.execSync("which ncview", { encoding: "utf8" });
+
+			// Open ncview in a VS Code terminal
+			const terminal = vscode.window.createTerminal("ncview");
+			terminal.show();
+			terminal.sendText(`ncview "${filePath}"`);
+
+			// Display a message to the user
+		} catch (error) {
+			// Handle errors gracefully
+			console.error("Error launching ncview:", error);
+
+			vscode.window.showErrorMessage(
+				"Failed to launch ncview. Ensure that ncview is installed and properly configured to work in the terminal."
+			);
+		}
+	});
+
+	context.subscriptions.push(disposable);
 }
 
 class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {

@@ -3,7 +3,7 @@
   "displayName": "Manish's Fantastic Dump",
   "publisher": "ManishVenumuddula",
   "description": "Run 'ncdump -h' on '.nc' files for accessibility in VSCode.",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "engines": {
     "vscode": "^1.50.0"
   },
@@ -16,6 +16,21 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "commands": [
+      {
+        "command": "extension.openInNcview",
+        "title": "Open in Ncview"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "extension.openInNcview",
+          "when": "resourceExtname == '.nc'",
+          "group": "navigation"
+        }
+      ]
+    },
     "customEditors": [
       {
         "viewType": "netcdf.viewer",
