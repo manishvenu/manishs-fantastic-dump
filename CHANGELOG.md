@@ -2,6 +2,9 @@
 
 All notable changes to the "manishsfantasticdump" extension will be documented in this file.
 
+### [0.0.11] - 2025-02-17
+- Added Search (Type Cntrl/Command-F)
+
 ### [0.0.10] - 2025-02-17
 - Background Code Update
 

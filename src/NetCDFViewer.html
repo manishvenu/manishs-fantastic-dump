@@ -5,46 +5,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NetCDF Viewer</title>
-    <style>
-        pre {
-            white-space: pre-wrap;
-        }
+    <link rel="stylesheet" href="src/style.css">
 
-        .variable {
-            cursor: pointer;
-            color: #007acc;
-            /* Text color */
-            text-decoration: underline;
-            /* Underline text to resemble a link */
-            background-color: transparent;
-            /* No background color */
-            border-radius: 0;
-            /* No border radius */
-            padding: 0;
-            /* No padding */
-            font-size: inherit;
-            /* Inherit font size from parent */
-        }
-    </style>
 </head>
 
 <body>
+    <div id="search-bar"
+        style="display:none; position: fixed; top: 10px; right: 10px; padding: 5px; border: 1px solid; border-radius: 5px;">
+        <input type="text" id="search-input" placeholder="Search..." style="margin-right: 5px;" />
+        <button id="prev-btn">Previous</button>
+        <button id="next-btn">Next</button>
+        <button id="close-btn">Close</button>
+    </div>
+
+
     <pre id="content"></pre>
-    <script>
-        const vscode = acquireVsCodeApi();
-
-
-        function addVariableClickListeners() {
-            document.querySelectorAll('.variable').forEach(element => {
-                element.addEventListener('click', (event) => {
-                    const variableName = event.target.textContent.trim();
-                    vscode.postMessage({ command: 'variableClick', variableName });
-                });
-            });
-        }
-
-        addVariableClickListeners(); // Initial attachment of event listeners
-    </script>
+    <script src="src/variableClick.js"></script>
+    <script src="src/search.js"></script>
 </body>
 
 </html>

@@ -11,7 +11,8 @@ Thanks to ChatGPT for the code ofc!
 ## Features
 
 - **Automatic ncdump Execution**: Automatically runs `ncdump -h` when you open NetCDF files (`.nc`).
-- **Auto-launch ncview**: On left click, the option to open ncview pops up, which runs `ncview <file>` on the `.nc` file
+- **Searchable ncdump Output**: Search the `ncdump` output with Ctrl/Command + F.
+- **Auto-launch ncview**: On left click, the option to open ncview pops up, which runs `ncview <file>` on the `.nc` file.
 - **Live Refresh**: Refreshes the output as the NetCDF files change or are replaced (Ncview does not).
 - **Lightweight**: Designed to be not big.
 

@@ -66,6 +66,22 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 			'src',
 			'NetCDFViewer.html'
 		);
+
+		const searchJsUri = vscode.Uri.joinPath(
+			this.context.extensionUri,
+			'src',
+			'search.js'  // Ensure the correct path to your JavaScript file
+		);
+		const variableClickJsUri = vscode.Uri.joinPath(
+			this.context.extensionUri,
+			'src',
+			'variableClick.js'  // Ensure the correct path to your JavaScript file
+		);
+		const cssUri = vscode.Uri.joinPath(
+			this.context.extensionUri, // assuming the extension URI
+			'src', // adjust to your folder structure
+			'style.css' // your CSS file name
+		);
 		const updateWebview = async () => {
 			let ncdumpOutput = await runNcdump(document.uri.fsPath);
 			// Wrap variable names in spans with the class 'variable'
@@ -73,7 +89,20 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 			// Read the HTML file
 			let htmlContent = (await vscode.workspace.fs.readFile(htmlUri)).toString();
 
+
 			htmlContent = htmlContent.replace('<pre id="content"></pre>', `<pre id="content">${ncdumpOutput}</pre>`);
+			htmlContent = htmlContent.replace(
+				'<script src="src/search.js"></script>',
+				`<script src="${webviewPanel.webview.asWebviewUri(searchJsUri)}"></script>`
+			);
+			htmlContent = htmlContent.replace(
+				'<script src="src/variableClick.js"></script>',
+				`<script src="${webviewPanel.webview.asWebviewUri(variableClickJsUri)}"></script>`
+			);
+			htmlContent = htmlContent.replace(
+				'<link rel="stylesheet" href="src/style.css">',
+				`<link rel="stylesheet" href="${webviewPanel.webview.asWebviewUri(cssUri)}">`
+			);
 
 			webviewPanel.webview.html = htmlContent;
 			// Get the file name from the document URI without the full path
@@ -161,6 +190,21 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 						}
 					}
 
+					break;
+				case 'search':
+					const query = message.query.toLowerCase();
+					const ncdumpOutput = await runNcdump(document.uri.fsPath);
+
+					// Simple text-based search for lines containing the query
+					const results = ncdumpOutput
+						.split('\n')
+						.filter(line => line.toLowerCase().includes(query));
+
+					// Send results back to the webview
+					webviewPanel.webview.postMessage({
+						command: 'displaySearchResults',
+						results
+					});
 					break;
 			}
 		});

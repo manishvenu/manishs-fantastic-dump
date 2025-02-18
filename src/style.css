@@ -1,0 +1,46 @@
+pre {
+    white-space: pre-wrap;
+}
+
+.variable {
+    cursor: pointer;
+    color: #007acc;
+    /* Text color */
+    text-decoration: underline;
+    /* Underline text to resemble a link */
+    background-color: transparent;
+    /* No background color */
+    border-radius: 0;
+    /* No border radius */
+    padding: 0;
+    /* No padding */
+    font-size: inherit;
+    /* Inherit font size from parent */
+}
+
+.highlight {
+    background-color: yellow;
+    padding: 2px;
+    border-radius: 3px;
+}
+
+.current-highlight {
+    background-color: orange;
+    outline: 2px solid red;
+}
+
+/* Default light mode styles */
+#search-bar {
+    background-color: #fff;
+    color: black;
+    border: 1px solid #ccc;
+}
+
+/* Dark mode styles */
+@media (prefers-color-scheme: dark) {
+    #search-bar {
+        background-color: #333;
+        color: white;
+        border: 1px solid #555;
+    }
+}
