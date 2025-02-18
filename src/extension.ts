@@ -2,14 +2,13 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as fs from 'fs';
-import * as child_process from 'child_process';
+import * as ChildProcess from 'child_process';
 
 
 import { exec } from 'child_process';
 
 export function activate(context: vscode.ExtensionContext) {
-	const provider = new NetCDFViewer();
+	const provider = new NetCDFViewer(context);
 
 	context.subscriptions.push(
 		vscode.window.registerCustomEditorProvider('netcdf.viewer', provider, {
@@ -22,7 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 		try {
 			// Check if ncview is installed
-			child_process.execSync("which ncview", { encoding: "utf8" });
+			ChildProcess.execSync("which ncview", { encoding: "utf8" });
 
 			// Open ncview in a VS Code terminal
 			const terminal = vscode.window.createTerminal("ncview");
@@ -44,7 +43,10 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
-
+	private context: vscode.ExtensionContext;
+	constructor(context: vscode.ExtensionContext) {
+		this.context = context;
+	}
 	async openCustomDocument(
 		uri: vscode.Uri,
 		_openContext: vscode.CustomDocumentOpenContext,
@@ -59,66 +61,18 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 		_token: vscode.CancellationToken
 	): Promise<void> {
 		webviewPanel.webview.options = { enableScripts: true };
-
+		const htmlUri = vscode.Uri.joinPath(
+			this.context.extensionUri,
+			'src',
+			'NetCDFViewer.html'
+		);
 		const updateWebview = async () => {
 			let ncdumpOutput = await runNcdump(document.uri.fsPath);
 			// Wrap variable names in spans with the class 'variable'
 			ncdumpOutput = ncdumpOutput.replace(/(\b\w+\b)(?=\()/g, '<span class="variable">$1</span>');
 			// Read the HTML file
+			let htmlContent = (await vscode.workspace.fs.readFile(htmlUri)).toString();
 
-			//const htmlFilePath = path.join(__dirname, '..', 'src', 'NetCDFViewer.html');
-			//let htmlContent = fs.readFileSync(htmlFilePath, 'utf8');
-			let htmlContent = `<!DOCTYPE html>
-								<html lang="en">
-
-								<head>
-									<meta charset="UTF-8">
-									<meta name="viewport" content="width=device-width, initial-scale=1.0">
-									<title>NetCDF Viewer</title>
-									<style>
-										pre {
-											white-space: pre-wrap;
-										}
-
-										.variable {
-											cursor: pointer;
-											color: #007acc;
-											/* Text color */
-											text-decoration: underline;
-											/* Underline text to resemble a link */
-											background-color: transparent;
-											/* No background color */
-											border-radius: 0;
-											/* No border radius */
-											padding: 0;
-											/* No padding */
-											font-size: inherit;
-											/* Inherit font size from parent */
-										}
-									</style>
-								</head>
-
-								<body>
-									<pre id="content"></pre>
-									<script>
-										const vscode = acquireVsCodeApi();
-
-
-										function addVariableClickListeners() {
-											document.querySelectorAll('.variable').forEach(element => {
-												element.addEventListener('click', (event) => {
-													const variableName = event.target.textContent.trim();
-													vscode.postMessage({ command: 'variableClick', variableName });
-												});
-											});
-										}
-
-										addVariableClickListeners(); // Initial attachment of event listeners
-									</script>
-								</body>
-
-								</html>`;
-			// Replace the placeholder with the actual content
 			htmlContent = htmlContent.replace('<pre id="content"></pre>', `<pre id="content">${ncdumpOutput}</pre>`);
 
 			webviewPanel.webview.html = htmlContent;
