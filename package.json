@@ -2,11 +2,17 @@
   "name": "manishsfantasticdump",
   "displayName": "Manish's Fantastic Dump",
   "publisher": "ManishVenumuddula",
-  "description": "Run 'ncdump -h' on '.nc' files for accessibility in VSCode.",
-  "version": "0.0.12",
+  "description": "Run 'ncdump -h' on '.nc'(NetCDF) files for accessibility in VSCode.",
+  "version": "0.0.13",
   "engines": {
     "vscode": "^1.50.0"
   },
+  "keywords": [
+    "NetCDF",
+    "ncdump",
+    "ncinfo",
+    "nc"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/manishvenu/manishs-fantastic-dump"

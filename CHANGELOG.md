@@ -2,6 +2,9 @@
 
 All notable changes to the "manishsfantasticdump" extension will be documented in this file.
 
+### [0.0.13] - 2025-07-07
+- Update keywords
+
 ### [0.0.12] - 2025-02-18
 - Bug Fix
 
