@@ -32,7 +32,7 @@
       "explorer/context": [
         {
           "command": "extension.openInNcview",
-          "when": "resourceExtname == '.nc'",
+          "when": "resourceExtname == '.nc' || resourceExtname == '.nc4'",
           "group": "navigation"
         }
       ]
@@ -42,9 +42,8 @@
         "viewType": "netcdf.viewer",
         "displayName": "NetCDF Viewer",
         "selector": [
-          {
-            "filenamePattern": "*.nc"
-          }
+          { "filenamePattern": "*.nc" },
+          { "filenamePattern": "*.nc4" }
         ]
       }
     ]
