@@ -2,6 +2,9 @@
 
 All notable changes to the "manishsfantasticdump" extension will be documented in this file.
 
+### [0.0.15] - 2025-11-03
+- Add .nc4 file format (hopefully)
+
 ### [0.0.13 - 0.0.14] - 2025-07-07
 - Update keywords
 
