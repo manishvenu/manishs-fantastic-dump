@@ -1,11 +1,6 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as ChildProcess from 'child_process';
-
-
-import { exec } from 'child_process';
+import { exec, execSync } from 'child_process';
 
 export function activate(context: vscode.ExtensionContext) {
 	const provider = new NetCDFViewer(context);
@@ -21,7 +16,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 		try {
 			// Check if ncview is installed
-			ChildProcess.execSync("which ncview", { encoding: "utf8" });
+			execSync("which ncview", { encoding: "utf8" });
 
 			// Open ncview in a VS Code terminal
 			const terminal = vscode.window.createTerminal("ncview");
@@ -83,13 +78,15 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 			'style.css' // your CSS file name
 		);
 		const updateWebview = async () => {
-			let ncdumpOutput = await runNcdump(document.uri.fsPath);
-			// Wrap variable names in spans with the class 'variable'
-			ncdumpOutput = ncdumpOutput.replace(/(\b\w+\b)(?=\()/g, '<span class="variable">$1</span>');
-			// Read the HTML file
+			let ncdumpOutput = escapeHtml(await runNcdump(document.uri.fsPath));
+			const NC_TYPES = new Set(['byte', 'ubyte', 'char', 'short', 'ushort', 'int', 'uint', 'int64', 'uint64', 'float', 'real', 'double', 'string']);
+			ncdumpOutput = ncdumpOutput.replace(/\b(\w+)\b(?=\()/g, (_: string, name: string) =>
+				NC_TYPES.has(name) ? name : `<span class="variable">${name}</span>`
+			);
+
 			let htmlContent = (await vscode.workspace.fs.readFile(htmlUri)).toString();
-
-
+			const csp = `default-src 'none'; style-src ${webviewPanel.webview.cspSource}; script-src ${webviewPanel.webview.cspSource};`;
+			htmlContent = htmlContent.replace('WEBVIEW_CSP_PLACEHOLDER', csp);
 			htmlContent = htmlContent.replace('<pre id="content"></pre>', `<pre id="content">${ncdumpOutput}</pre>`);
 			htmlContent = htmlContent.replace(
 				'<script src="src/search.js"></script>',
@@ -105,9 +102,8 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 			);
 
 			webviewPanel.webview.html = htmlContent;
-			// Get the file name from the document URI without the full path
-			const fileName = path.basename(document.uri.fsPath); // This gives you just the file name
-			const statusBarMessage = vscode.window.setStatusBarMessage(`Loaded: ${fileName}`, 1000); // Show for 2 seconds
+			const fileName = path.basename(document.uri.fsPath);
+			vscode.window.setStatusBarMessage(`Loaded: ${fileName}`, 1000);
 		};
 
 		// Run ncdump initially
@@ -191,21 +187,6 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 					}
 
 					break;
-				case 'search':
-					const query = message.query.toLowerCase();
-					const ncdumpOutput = await runNcdump(document.uri.fsPath);
-
-					// Simple text-based search for lines containing the query
-					const results = ncdumpOutput
-						.split('\n')
-						.filter(line => line.toLowerCase().includes(query));
-
-					// Send results back to the webview
-					webviewPanel.webview.postMessage({
-						command: 'displaySearchResults',
-						results
-					});
-					break;
 			}
 		});
 	}
@@ -231,15 +212,12 @@ async function runNcdumpVariable(
 	variableName: string,
 	limitOutput: boolean = false
 ): Promise<string> {
-	const { exec } = require('child_process');
 	return new Promise((resolve, reject) => {
-		// Adjust the command to include piping correctly
-		const baseCommand = `ncdump -v ${variableName} ${filePath}`;
-		const bigFileBaseCommand = `ncdump -v ${variableName} ${filePath} | head -n 500`;
-		// const command = limitOutput ? `${baseCommand} | head -n 100` : baseCommand;
+		const baseCommand = `ncdump -v "${variableName}" "${filePath}"`;
+		const bigFileBaseCommand = `ncdump -v "${variableName}" "${filePath}" | head -n 500`;
 		const command = limitOutput ? bigFileBaseCommand : baseCommand;
 
-		exec(command, { shell: '/bin/bash' }, (error: any, stdout: string, stderr: string) => {
+		exec(command, { shell: '/bin/bash' }, (error: Error | null, stdout: string, stderr: string) => {
 			if (error) {
 				reject(`Error: ${stderr}`);
 			} else {
@@ -252,6 +230,13 @@ async function runNcdumpVariable(
 
 
 
+
+function escapeHtml(text: string): string {
+	return text
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;');
+}
 
 // This method is called when your extension is deactivated
 export function deactivate() { }

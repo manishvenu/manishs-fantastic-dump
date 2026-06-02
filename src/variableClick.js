@@ -14,9 +14,9 @@ addVariableClickListeners(); // Initial attachment of event listeners
 
 // Replace variable names with spans for highlighting and adding listeners
 function recoverVariableClickWorkflow(content) {
-    // Replace variable names with clickable spans
-    content.innerHTML = content.innerHTML.replace(/(\b\w+\b)(?=\()/g, '<span class="variable">$1</span>');
-
-    // Add click listeners to the variable spans
+    const NC_TYPES = new Set(['byte', 'ubyte', 'char', 'short', 'ushort', 'int', 'uint', 'int64', 'uint64', 'float', 'real', 'double', 'string']);
+    content.innerHTML = content.innerHTML.replace(/\b(\w+)\b(?=\()/g, (_, name) =>
+        NC_TYPES.has(name) ? name : `<span class="variable">${name}</span>`
+    );
     addVariableClickListeners();
 }
