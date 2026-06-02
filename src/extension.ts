@@ -130,18 +130,11 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 			switch (message.command) {
 				case 'variableClick':
 					try {
-						const variableOutput = await runNcdumpVariable(document.uri.fsPath, message.variableName, false);
+						const variableOutput = await runNcdumpVariable(document.uri.fsPath, message.variableName);
 						await openVariablePanel(this.context.extensionUri, message.variableName, variableOutput);
 					} catch (error) {
-						try {
-							vscode.window.showWarningMessage(`MFD Warning: Large Variable -> Only ~500 lines loaded!`);
-							const variableOutput = await runNcdumpVariable(document.uri.fsPath, message.variableName, true);
-							await openVariablePanel(this.context.extensionUri, message.variableName, variableOutput);
-						} catch (error) {
-							console.error('Error handling variable click:', error);
-							vscode.window.showErrorMessage(`MFD Error: Too slow to load!`);
-							webviewPanel.webview.postMessage({ command: 'showError', message: 'The variable output is too large to load.' });
-						}
+						console.error('Error handling variable click:', error);
+						vscode.window.showErrorMessage(`MFD Error: Failed to load variable "${message.variableName}".`);
 					}
 
 					break;
@@ -165,22 +158,13 @@ function runNcdump(filePath: string): Promise<string> {
 }
 
 
-async function runNcdumpVariable(
-	filePath: string,
-	variableName: string,
-	limitOutput: boolean = false
-): Promise<string> {
+function runNcdumpVariable(filePath: string, variableName: string): Promise<string> {
 	return new Promise((resolve, reject) => {
-		const baseCommand = `ncdump -v "${variableName}" "${filePath}"`;
-		const bigFileBaseCommand = `ncdump -v "${variableName}" "${filePath}" | head -n 500`;
-		const command = limitOutput ? bigFileBaseCommand : baseCommand;
-
-		exec(command, { shell: '/bin/bash' }, (error: Error | null, stdout: string, stderr: string) => {
+		exec(`ncdump -v "${variableName}" "${filePath}"`, { shell: '/bin/bash' }, (error: Error | null, stdout: string, stderr: string) => {
 			if (error) {
 				reject(`Error: ${stderr}`);
 			} else {
-				const dataSection = stdout.split('data:')[1]?.trim() || '';
-				resolve(dataSection);
+				resolve(stdout.split('data:')[1]?.trim() || '');
 			}
 		});
 	});
@@ -189,12 +173,21 @@ async function runNcdumpVariable(
 
 
 
+const LINES_PER_PAGE = 500;
+
 async function openVariablePanel(extensionUri: vscode.Uri, variableName: string, variableOutput: string): Promise<void> {
+	const lines = variableOutput.split('\n');
+	const pages: string[] = [];
+	for (let i = 0; i < lines.length; i += LINES_PER_PAGE) {
+		pages.push(escapeHtml(lines.slice(i, i + LINES_PER_PAGE).join('\n')));
+	}
+
 	const templateUri = vscode.Uri.joinPath(extensionUri, 'src', 'VariableViewer.html');
 	let html = (await vscode.workspace.fs.readFile(templateUri)).toString();
 	html = html
 		.replace('VARIABLE_NAME_PLACEHOLDER', escapeHtml(variableName))
-		.replace('VARIABLE_OUTPUT_PLACEHOLDER', escapeHtml(variableOutput));
+		.replace('PAGES_JSON_PLACEHOLDER', JSON.stringify(pages));
+
 	const panel = vscode.window.createWebviewPanel(
 		'netcdfVariableViewer',
 		`Variable: ${variableName}`,
