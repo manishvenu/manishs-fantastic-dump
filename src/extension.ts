@@ -131,54 +131,12 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 				case 'variableClick':
 					try {
 						const variableOutput = await runNcdumpVariable(document.uri.fsPath, message.variableName, false);
-						const newPanel = vscode.window.createWebviewPanel(
-							'netcdfVariableViewer',
-							`Variable: ${message.variableName}`,
-							vscode.ViewColumn.Beside,
-							{ enableScripts: true }
-						);
-						newPanel.webview.html = `
-								<!DOCTYPE html>
-								<html lang="en">
-								<head>
-									<meta charset="UTF-8">
-									<meta name="viewport" content="width=device-width, initial-scale=1.0">
-									<title>Variable: ${message.variableName}</title>
-									<style>
-										pre { white-space: pre-wrap; }
-									</style>
-								</head>
-								<body>
-									<pre>${variableOutput}</pre>
-								</body>
-								</html>
-							`;
+						await openVariablePanel(this.context.extensionUri, message.variableName, variableOutput);
 					} catch (error) {
 						try {
 							vscode.window.showWarningMessage(`MFD Warning: Large Variable -> Only ~500 lines loaded!`);
 							const variableOutput = await runNcdumpVariable(document.uri.fsPath, message.variableName, true);
-							const newPanel = vscode.window.createWebviewPanel(
-								'netcdfVariableViewer',
-								`Variable: ${message.variableName}`,
-								vscode.ViewColumn.Beside,
-								{ enableScripts: true }
-							);
-							newPanel.webview.html = `
-									<!DOCTYPE html>
-									<html lang="en">
-									<head>
-										<meta charset="UTF-8">
-										<meta name="viewport" content="width=device-width, initial-scale=1.0">
-										<title>Variable: ${message.variableName}</title>
-										<style>
-											pre { white-space: pre-wrap; }
-										</style>
-									</head>
-									<body>
-										<pre>${variableOutput}</pre>
-									</body>
-									</html>
-								`;
+							await openVariablePanel(this.context.extensionUri, message.variableName, variableOutput);
 						} catch (error) {
 							console.error('Error handling variable click:', error);
 							vscode.window.showErrorMessage(`MFD Error: Too slow to load!`);
@@ -230,6 +188,21 @@ async function runNcdumpVariable(
 
 
 
+
+async function openVariablePanel(extensionUri: vscode.Uri, variableName: string, variableOutput: string): Promise<void> {
+	const templateUri = vscode.Uri.joinPath(extensionUri, 'src', 'VariableViewer.html');
+	let html = (await vscode.workspace.fs.readFile(templateUri)).toString();
+	html = html
+		.replace('VARIABLE_NAME_PLACEHOLDER', escapeHtml(variableName))
+		.replace('VARIABLE_OUTPUT_PLACEHOLDER', escapeHtml(variableOutput));
+	const panel = vscode.window.createWebviewPanel(
+		'netcdfVariableViewer',
+		`Variable: ${variableName}`,
+		vscode.ViewColumn.Beside,
+		{}
+	);
+	panel.webview.html = html;
+}
 
 function escapeHtml(text: string): string {
 	return text
