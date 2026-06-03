@@ -1,5 +1,7 @@
 // search.js
 
+document.getElementById('search-bar').style.display = 'none';
+
 let currentIndex = 0;
 let matches = [];
 

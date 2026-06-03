@@ -78,6 +78,7 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 			'style.css' // your CSS file name
 		);
 		const updateWebview = async () => {
+			webviewPanel.webview.html = `<!DOCTYPE html><html><body style="font-family:monospace;padding:1rem;color:var(--vscode-editor-foreground,#ccc);">Loading...</body></html>`;
 			let ncdumpOutput = escapeHtml(await runNcdump(document.uri.fsPath));
 			const NC_TYPES = new Set(['byte', 'ubyte', 'char', 'short', 'ushort', 'int', 'uint', 'int64', 'uint64', 'float', 'real', 'double', 'string']);
 			ncdumpOutput = ncdumpOutput.replace(/\b(\w+)\b(?=\()/g, (_: string, name: string) =>
@@ -182,18 +183,27 @@ async function openVariablePanel(extensionUri: vscode.Uri, variableName: string,
 		pages.push(escapeHtml(lines.slice(i, i + LINES_PER_PAGE).join('\n')));
 	}
 
-	const templateUri = vscode.Uri.joinPath(extensionUri, 'src', 'VariableViewer.html');
-	let html = (await vscode.workspace.fs.readFile(templateUri)).toString();
-	html = html
-		.replace('VARIABLE_NAME_PLACEHOLDER', escapeHtml(variableName))
-		.replace('PAGES_JSON_PLACEHOLDER', JSON.stringify(pages));
-
 	const panel = vscode.window.createWebviewPanel(
 		'netcdfVariableViewer',
 		`Variable: ${variableName}`,
 		vscode.ViewColumn.Beside,
-		{}
+		{ enableScripts: true }
 	);
+
+	const jsUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'src', 'variableViewer.js'));
+	const cssUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'src', 'variableViewer.css'));
+	const csp = `default-src 'none'; style-src ${panel.webview.cspSource}; script-src ${panel.webview.cspSource};`;
+	const safeJson = JSON.stringify(pages).replace(/<\/script>/gi, '<\\/script>');
+
+	const templateUri = vscode.Uri.joinPath(extensionUri, 'src', 'VariableViewer.html');
+	let html = (await vscode.workspace.fs.readFile(templateUri)).toString();
+	html = html
+		.replace('WEBVIEW_CSP_PLACEHOLDER', csp)
+		.replace('VARIABLE_NAME_PLACEHOLDER', escapeHtml(variableName))
+		.replace('PAGES_JSON_PLACEHOLDER', safeJson)
+		.replace('<link rel="stylesheet" href="src/variableViewer.css">', `<link rel="stylesheet" href="${cssUri}">`)
+		.replace('<script src="src/variableViewer.js"></script>', `<script src="${jsUri}"></script>`);
+
 	panel.webview.html = html;
 }
 

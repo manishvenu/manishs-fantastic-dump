@@ -2,6 +2,13 @@
 
 All notable changes to the "manishsfantasticdump" extension will be documented in this file.
 
+### [0.0.16] - 2026-06-02
+- Extract inline variable viewer HTML into VariableViewer.html template
+- Add pagination to variable viewer (500 lines per page, keyboard arrow navigation)
+- Fix variable viewer Content Security Policy: remove `unsafe-inline` by moving inline script and styles to external files
+- Add loading indicator while ncdump runs on large files
+- Fix search bar showing on open (now always starts hidden until Ctrl/Cmd+F)
+
 ### [0.0.15] - 2025-11-03
 - Add .nc4 file format (hopefully)
 
