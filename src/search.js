@@ -2,16 +2,33 @@
 
 document.getElementById('search-bar').style.display = 'none';
 
+const _contentEl = document.getElementById('content');
+const _originalInnerHTML = _contentEl.innerHTML;
+
 let currentIndex = 0;
 let matches = [];
 
+function _highlightTextNodes(node, regex) {
+    if (node.nodeType === Node.TEXT_NODE) {
+        regex.lastIndex = 0;
+        if (regex.test(node.textContent)) {
+            regex.lastIndex = 0;
+            const wrapper = document.createElement('span');
+            wrapper.innerHTML = node.textContent.replace(regex, m => `<mark class="highlight">${m}</mark>`);
+            node.parentNode.replaceChild(wrapper, node);
+        }
+    } else {
+        Array.from(node.childNodes).forEach(child => _highlightTextNodes(child, regex));
+    }
+}
+
 function highlightMatches(query) {
     const content = document.getElementById('content');
-    const text = content.innerText;
-    const regex = new RegExp(query, 'gi');
-    const highlighted = text.replace(regex, (match) => `<mark class="highlight">${match}</mark>`);
-    content.innerHTML = highlighted;
-    recoverVariableClickWorkflow(content);
+    content.innerHTML = _originalInnerHTML;
+    addVariableClickListeners();
+    let regex;
+    try { regex = new RegExp(query, 'gi'); } catch { return; }
+    _highlightTextNodes(content, regex);
 
     matches = Array.from(document.querySelectorAll('.highlight'));
     currentIndex = 0;
@@ -32,8 +49,8 @@ function scrollToMatch() {
 
 function clearHighlights() {
     const content = document.getElementById('content');
-    content.innerHTML = content.innerText; // Reset to plain text
-    recoverVariableClickWorkflow(content);
+    content.innerHTML = _originalInnerHTML;
+    addVariableClickListeners();
     matches = [];
 }
 

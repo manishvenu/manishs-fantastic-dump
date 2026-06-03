@@ -55,7 +55,10 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 		webviewPanel: vscode.WebviewPanel,
 		_token: vscode.CancellationToken
 	): Promise<void> {
-		webviewPanel.webview.options = { enableScripts: true };
+		webviewPanel.webview.options = {
+				enableScripts: true,
+				localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, 'src')]
+			};
 		const htmlUri = vscode.Uri.joinPath(
 			this.context.extensionUri,
 			'src',
@@ -79,8 +82,29 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 		);
 		const updateWebview = async () => {
 			webviewPanel.webview.html = `<!DOCTYPE html><html><body style="font-family:monospace;padding:1rem;color:var(--vscode-editor-foreground,#ccc);">Loading...</body></html>`;
-			let ncdumpOutput = escapeHtml(await runNcdump(document.uri.fsPath));
+			let rawOutput: string;
+			let stat: vscode.FileStat;
+			let kind: string;
+			try {
+				[rawOutput, stat, kind] = await Promise.all([
+					runNcdump(document.uri.fsPath),
+					vscode.workspace.fs.stat(document.uri),
+					runNcdumpKind(document.uri.fsPath).catch(() => '')
+				]);
+			} catch (err) {
+				const msg = String(err).replace(/^Error:\s*/, '');
+				webviewPanel.webview.html = `<!DOCTYPE html><html><body style="font-family:monospace;padding:1rem;">
+<span style="color:var(--vscode-errorForeground,#f48771);font-weight:bold;">Failed to load file</span><br><br>
+<code>${escapeHtml(msg)}</code><br><br>
+Make sure <code>ncdump</code> is installed and on your PATH.
+</body></html>`;
+				return;
+			}
+			const meta = parseNcdumpMeta(rawOutput);
+			const summaryHtml = buildSummaryHtml(meta, stat.size, kind);
+
 			const NC_TYPES = new Set(['byte', 'ubyte', 'char', 'short', 'ushort', 'int', 'uint', 'int64', 'uint64', 'float', 'real', 'double', 'string']);
+			let ncdumpOutput = escapeHtml(rawOutput);
 			ncdumpOutput = ncdumpOutput.replace(/\b(\w+)\b(?=\()/g, (_: string, name: string) =>
 				NC_TYPES.has(name) ? name : `<span class="variable">${name}</span>`
 			);
@@ -88,7 +112,7 @@ class NetCDFViewer implements vscode.CustomReadonlyEditorProvider {
 			let htmlContent = (await vscode.workspace.fs.readFile(htmlUri)).toString();
 			const csp = `default-src 'none'; style-src ${webviewPanel.webview.cspSource}; script-src ${webviewPanel.webview.cspSource};`;
 			htmlContent = htmlContent.replace('WEBVIEW_CSP_PLACEHOLDER', csp);
-			htmlContent = htmlContent.replace('<pre id="content"></pre>', `<pre id="content">${ncdumpOutput}</pre>`);
+			htmlContent = htmlContent.replace('<pre id="content"></pre>', `${summaryHtml}<pre id="content">${ncdumpOutput}</pre>`);
 			htmlContent = htmlContent.replace(
 				'<script src="src/search.js"></script>',
 				`<script src="${webviewPanel.webview.asWebviewUri(searchJsUri)}"></script>`
@@ -159,6 +183,15 @@ function runNcdump(filePath: string): Promise<string> {
 }
 
 
+function runNcdumpKind(filePath: string): Promise<string> {
+	return new Promise((resolve, reject) => {
+		exec(`ncdump -k "${filePath}"`, (error, stdout, stderr) => {
+			if (error) { reject(`Error: ${stderr}`); }
+			else { resolve(stdout.trim()); }
+		});
+	});
+}
+
 function runNcdumpVariable(filePath: string, variableName: string): Promise<string> {
 	return new Promise((resolve, reject) => {
 		exec(`ncdump -v "${variableName}" "${filePath}"`, { shell: '/bin/bash' }, (error: Error | null, stdout: string, stderr: string) => {
@@ -187,7 +220,7 @@ async function openVariablePanel(extensionUri: vscode.Uri, variableName: string,
 		'netcdfVariableViewer',
 		`Variable: ${variableName}`,
 		vscode.ViewColumn.Beside,
-		{ enableScripts: true }
+		{ enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'src')] }
 	);
 
 	const jsUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'src', 'variableViewer.js'));
@@ -205,6 +238,42 @@ async function openVariablePanel(extensionUri: vscode.Uri, variableName: string,
 		.replace('<script src="src/variableViewer.js"></script>', `<script src="${jsUri}"></script>`);
 
 	panel.webview.html = html;
+}
+
+function parseNcdumpMeta(output: string): { dimensions: number; variables: number } {
+	const NC_TYPES = ['byte', 'ubyte', 'char', 'short', 'ushort', 'int', 'uint', 'int64', 'uint64', 'float', 'real', 'double', 'string'];
+
+	const dimSection = output.match(/\bdimensions:\s*([\s\S]*?)(?=\b\w+:|\})/);
+	const dimensions = dimSection ? (dimSection[1].match(/\S+\s*=/g) || []).length : 0;
+
+	const typePattern = NC_TYPES.join('|');
+	const variables = (output.match(new RegExp(`^\\s+(?:${typePattern})\\s+\\w+\\s*\\(`, 'gm')) || []).length;
+
+	return { dimensions, variables };
+}
+
+function normalizeFormat(kind: string): string {
+	switch (kind.trim()) {
+		case 'classic': return 'NetCDF-3';
+		case '64-bit offset': return 'NetCDF-3 (64-bit)';
+		case 'cdf5': return 'NetCDF-3 (CDF-5)';
+		case 'netCDF-4': return 'NetCDF-4';
+		case 'netCDF-4 classic model': return 'NetCDF-4 Classic';
+		default: return kind.trim() || 'Unknown';
+	}
+}
+
+function formatFileSize(bytes: number): string {
+	if (bytes < 1024) { return `${bytes} B`; }
+	if (bytes < 1024 * 1024) { return `${(bytes / 1024).toFixed(1)} KB`; }
+	if (bytes < 1024 * 1024 * 1024) { return `${(bytes / (1024 * 1024)).toFixed(1)} MB`; }
+	return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+function buildSummaryHtml(meta: { dimensions: number; variables: number }, fileSize: number, kind: string): string {
+	const chip = (label: string, value: string) =>
+		`<span class="summary-chip"><span class="summary-label">${label}</span>${value}</span>`;
+	return `<div class="file-summary">${chip('Format', escapeHtml(normalizeFormat(kind)))}${chip('Variables', String(meta.variables))}${chip('Dimensions', String(meta.dimensions))}${chip('Size', formatFileSize(fileSize))}</div>`;
 }
 
 function escapeHtml(text: string): string {

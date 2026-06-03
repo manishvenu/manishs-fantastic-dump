@@ -2,6 +2,34 @@ pre {
     white-space: pre-wrap;
 }
 
+.file-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.5rem 0 0.75rem;
+    margin-bottom: 0.25rem;
+    border-bottom: 1px solid var(--vscode-editorWidget-border, #454545);
+}
+
+.summary-chip {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--vscode-badge-background, #4d4d4d);
+    color: var(--vscode-badge-foreground, #fff);
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 0.8em;
+    line-height: 1.4;
+}
+
+.summary-label {
+    font-size: 0.7em;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.7;
+}
+
 .variable {
     cursor: pointer;
     color: #007acc;

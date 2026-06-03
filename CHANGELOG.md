@@ -2,6 +2,14 @@
 
 All notable changes to the "manishsfantasticdump" extension will be documented in this file.
 
+### [0.0.18] - 2026-06-02
+- Fix missing activation event for `.nc4` files
+- Show error message inside the webview when ncdump fails (instead of staying on "Loading...")
+- Lock webview local resource roots to extension `src/` directory
+
+### [0.0.17] - 2026-06-02
+- Add file summary card showing format (NetCDF-3/4), variable count, dimension count, and file size
+
 ### [0.0.16] - 2026-06-02
 - Extract inline variable viewer HTML into VariableViewer.html template
 - Add pagination to variable viewer (500 lines per page, keyboard arrow navigation)

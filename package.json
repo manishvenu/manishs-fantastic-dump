@@ -3,7 +3,7 @@
   "displayName": "Manish's Fantastic Dump",
   "publisher": "ManishVenumuddula",
   "description": "Run 'ncdump -h' on '.nc' (NetCDF) files for accessibility in VSCode.",
-  "version": "0.0.16",
+  "version": "0.0.18",
   "engines": {
     "vscode": "^1.50.0"
   },
@@ -49,7 +49,7 @@
     ]
   },
   "activationEvents": [
-    "onFileSystem:.nc"
+    "onCustomEditor:netcdf.viewer"
   ],
   "scripts": {
     "vscode:prepublish": "npm run compile",
