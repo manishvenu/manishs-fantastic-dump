@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { exec, execSync } from 'child_process';
+import { exec, execSync, spawn } from 'child_process';
 
 export function activate(context: vscode.ExtensionContext) {
 	const provider = new NetCDFViewer(context);
@@ -159,7 +159,7 @@ Make sure <code>ncdump</code> is installed and on your PATH.
 						await openVariablePanel(this.context.extensionUri, message.variableName, variableOutput);
 					} catch (error) {
 						console.error('Error handling variable click:', error);
-						vscode.window.showErrorMessage(`MFD Error: Failed to load variable "${message.variableName}".`);
+						vscode.window.showErrorMessage(`MFD Error: Failed to load variable "${message.variableName}". ${String(error).replace(/^Error:\s*/, '')}`);
 					}
 
 					break;
@@ -192,14 +192,37 @@ function runNcdumpKind(filePath: string): Promise<string> {
 	});
 }
 
+// Large variables dump far more text than we can show, so stop reading after this much
+const MAX_VARIABLE_BYTES = 10 * 1024 * 1024;
+
 function runNcdumpVariable(filePath: string, variableName: string): Promise<string> {
 	return new Promise((resolve, reject) => {
-		exec(`ncdump -v "${variableName}" "${filePath}"`, { shell: '/bin/bash' }, (error: Error | null, stdout: string, stderr: string) => {
-			if (error) {
-				reject(`Error: ${stderr}`);
-			} else {
-				resolve(stdout.split('data:')[1]?.trim() || '');
+		const proc = spawn('ncdump', ['-v', variableName, filePath]);
+		const chunks: Buffer[] = [];
+		let size = 0;
+		let truncated = false;
+		let stderr = '';
+		proc.stdout.on('data', (chunk: Buffer) => {
+			if (truncated) { return; }
+			chunks.push(chunk);
+			size += chunk.length;
+			if (size >= MAX_VARIABLE_BYTES) {
+				truncated = true;
+				proc.kill();
 			}
+		});
+		proc.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
+		proc.on('error', (error) => reject(`Error: ${error.message}`));
+		proc.on('close', (code) => {
+			if (code !== 0 && !truncated) {
+				reject(`Error: ${stderr}`);
+				return;
+			}
+			let output = Buffer.concat(chunks).toString().split('data:')[1]?.trim() || '';
+			if (truncated) {
+				output += `\n\n... output truncated at ${MAX_VARIABLE_BYTES / (1024 * 1024)} MB. Use ncdump or ncview to see the rest.`;
+			}
+			resolve(output);
 		});
 	});
 }
