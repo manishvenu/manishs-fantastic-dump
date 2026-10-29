@@ -2,7 +2,7 @@
 
 All notable changes to the "manishsfantasticdump" extension will be documented in this file.
 
-### [Unreleased]
+### [0.0.20] - 2026-10-29
 - Variables inside NetCDF-4 groups, scalar variables, and names with special characters are now clickable
 - Hover a variable to see its declaration and attributes
 - New settings `manishsfantasticdump.ncdumpPath` and `manishsfantasticdump.ncviewPath` for installs VS Code can't find on its PATH
