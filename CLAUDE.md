@@ -13,7 +13,7 @@ The extension registers one `CustomReadonlyEditorProvider` under two view types:
 - [src/VariableViewer.html](src/VariableViewer.html) — Variable data panel template
 - [src/variableClick.js](src/variableClick.js) — Defines `addVariableClickListeners()`; posts `{ command: 'variableClick', variablePath, cdlName }`. Owns the main view's single `acquireVsCodeApi()` call
 - [src/search.js](src/search.js) — Cmd/Ctrl+F plain-text search (marks built with DOM nodes, never `innerHTML` from text) and the `update` message handler for live refresh; must load after `variableClick.js` because it calls `addVariableClickListeners()` after resetting `innerHTML`
-- [src/variableViewer.js](src/variableViewer.js) — Pagination (prev/next buttons, arrow and PageUp/PageDown keys) and the Copy name button (posts `copy` to the host)
+- [src/variableViewer.js](src/variableViewer.js) — Pagination (prev/next buttons, arrow and PageUp/PageDown keys)
 - [src/style.css](src/style.css), [src/variableViewer.css](src/variableViewer.css) — Styles, dark mode via `prefers-color-scheme`
 - [src/test/ncdump.test.ts](src/test/ncdump.test.ts) — Unit tests for parsing, extraction and helpers; [src/test/extension.test.ts](src/test/extension.test.ts) checks activation
 

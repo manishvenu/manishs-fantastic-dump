@@ -1,4 +1,3 @@
-const vscode = acquireVsCodeApi();
 const pages = JSON.parse(document.getElementById('pages-data').textContent);
 let current = 0;
 
@@ -27,10 +26,6 @@ nextBtn.addEventListener('click', () => { if (current < pages.length - 1) showPa
 document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft' || e.key === 'PageUp') prevBtn.click();
     if (e.key === 'ArrowRight' || e.key === 'PageDown') nextBtn.click();
-});
-
-document.getElementById('copy-btn').addEventListener('click', () => {
-    vscode.postMessage({ command: 'copy', text: document.getElementById('var-name').textContent });
 });
 
 showPage(0);

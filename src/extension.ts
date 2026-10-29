@@ -173,12 +173,6 @@ Make sure <code>ncdump</code> is installed, or set <code>${CONFIG_SECTION}.ncdum
 			);
 			this.variablePanels.set(key, panel);
 			panel.onDidDispose(() => this.variablePanels.delete(key));
-			panel.webview.onDidReceiveMessage(async message => {
-				if (message.command === 'copy') {
-					await vscode.env.clipboard.writeText(message.text);
-					vscode.window.setStatusBarMessage(`Copied "${message.text}"`, 2000);
-				}
-			});
 		}
 
 		const lines = variableOutput.split('\n');
@@ -194,7 +188,7 @@ Make sure <code>ncdump</code> is installed, or set <code>${CONFIG_SECTION}.ncdum
 		const template = (await vscode.workspace.fs.readFile(vscode.Uri.joinPath(srcUri, 'VariableViewer.html'))).toString();
 		webview.html = template
 			.replace('WEBVIEW_CSP_PLACEHOLDER', () => csp)
-			.replace(/VARIABLE_NAME_PLACEHOLDER/g, () => escapeHtml(variablePath))
+			.replace('VARIABLE_NAME_PLACEHOLDER', () => escapeHtml(variablePath))
 			.replace('PAGES_JSON_PLACEHOLDER', () => safeJson)
 			.replace('<link rel="stylesheet" href="src/variableViewer.css">', () => `<link rel="stylesheet" href="${asset('variableViewer.css')}">`)
 			.replace('<script src="src/variableViewer.js"></script>', () => `<script src="${asset('variableViewer.js')}"></script>`);

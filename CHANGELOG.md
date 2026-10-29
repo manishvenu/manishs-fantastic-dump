@@ -8,7 +8,7 @@ All notable changes to the "manishsfantasticdump" extension will be documented i
 - New settings `manishsfantasticdump.ncdumpPath` and `manishsfantasticdump.ncviewPath` for installs VS Code can't find on its PATH
 - Clearer error when `ncdump` can't be found
 - Open `.nc3` and `.netcdf` files by default; `.cdf`, `.h5`, `.hdf5` and `.he5` via "Reopen Editor With..."
-- Clicking a variable again reuses its panel; added a Copy name button
+- Clicking a variable again reuses its panel
 - Refreshing after the file changes keeps scroll position and search, and waits for the file to finish writing
 - Search now matches plain text (Enter / Shift+Enter / Esc) and no longer treats metadata as HTML
 - "Open in Ncview" works before any NetCDF file has been opened

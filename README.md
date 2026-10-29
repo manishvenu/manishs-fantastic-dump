@@ -10,7 +10,7 @@ Opens `.nc`, `.nc3`, `.nc4` and `.netcdf` files inline using `ncdump -h`. Useful
 
 - **File Summary**: Format (NetCDF-3/4), variable count, dimension count, and file size at a glance before you read anything.
 - **Automatic ncdump Execution**: Runs `ncdump -h` when you open `.nc` or `.nc4` files.
-- **Clickable Variables**: Click any variable name, including variables inside NetCDF-4 groups, to open a side panel with its full data (paginated for large variables, with a Copy name button).
+- **Clickable Variables**: Click any variable name, including variables inside NetCDF-4 groups, to open a side panel with its full data (paginated for large variables).
 - **Attribute Tooltips**: Hover a variable name to see its declaration and attributes.
 - **Searchable Output**: Search the `ncdump` output with Ctrl/Cmd+F (Enter / Shift+Enter to step through matches, Esc to close).
 - **Auto-launch ncview**: Right-click a file in the Explorer → "Open in Ncview".
