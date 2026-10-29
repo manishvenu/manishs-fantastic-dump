@@ -3,7 +3,7 @@
   "displayName": "Manish's Fantastic Dump",
   "publisher": "ManishVenumuddula",
   "description": "Run 'ncdump -h' on '.nc' (NetCDF) files for accessibility in VSCode.",
-  "version": "0.0.18",
+  "version": "0.0.19",
   "engines": {
     "vscode": "^1.50.0"
   },
@@ -42,8 +42,12 @@
         "viewType": "netcdf.viewer",
         "displayName": "NetCDF Viewer",
         "selector": [
-          { "filenamePattern": "*.nc" },
-          { "filenamePattern": "*.nc4" }
+          {
+            "filenamePattern": "*.nc"
+          },
+          {
+            "filenamePattern": "*.nc4"
+          }
         ]
       }
     ]
@@ -57,17 +61,19 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "package": "vsce package"
   },
   "devDependencies": {
-    "@types/vscode": "^1.50.0",
     "@types/mocha": "^10.0.9",
     "@types/node": "20.x",
+    "@types/vscode": "^1.50.0",
     "@typescript-eslint/eslint-plugin": "^8.10.0",
     "@typescript-eslint/parser": "^8.7.0",
-    "eslint": "^9.13.0",
-    "typescript": "^5.6.3",
     "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1"
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^4.1.0",
+    "eslint": "^9.13.0",
+    "typescript": "^5.6.3"
   }
 }

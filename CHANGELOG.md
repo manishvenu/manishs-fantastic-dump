@@ -2,6 +2,9 @@
 
 All notable changes to the "manishsfantasticdump" extension will be documented in this file.
 
+### [0.0.19] - 2026-10-29
+- Stream `ncdump -v` output so large variables open in the variable viewer
+
 ### [0.0.18] - 2026-06-02
 - Fix missing activation event for `.nc4` files
 - Show error message inside the webview when ncdump fails (instead of staying on "Loading...")
