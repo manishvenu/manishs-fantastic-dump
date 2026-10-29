@@ -11,14 +11,19 @@
     "NetCDF",
     "ncdump",
     "ncinfo",
-    "nc"
+    "nc",
+    "netcdf4",
+    "hdf5",
+    "climate",
+    "ncview"
   ],
   "repository": {
     "type": "git",
     "url": "https://github.com/manishvenu/manishs-fantastic-dump"
   },
   "categories": [
-    "Other"
+    "Data Science",
+    "Visualization"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -32,7 +37,7 @@
       "explorer/context": [
         {
           "command": "extension.openInNcview",
-          "when": "resourceExtname == '.nc' || resourceExtname == '.nc4'",
+          "when": "resourceExtname =~ /^\\.(nc|nc3|nc4|netcdf)$/",
           "group": "navigation"
         }
       ]
@@ -46,14 +51,58 @@
             "filenamePattern": "*.nc"
           },
           {
+            "filenamePattern": "*.nc3"
+          },
+          {
             "filenamePattern": "*.nc4"
+          },
+          {
+            "filenamePattern": "*.netcdf"
+          }
+        ]
+      },
+      {
+        "viewType": "netcdf.viewer.optional",
+        "displayName": "NetCDF Viewer (ncdump)",
+        "priority": "option",
+        "selector": [
+          {
+            "filenamePattern": "*.cdf"
+          },
+          {
+            "filenamePattern": "*.h5"
+          },
+          {
+            "filenamePattern": "*.hdf5"
+          },
+          {
+            "filenamePattern": "*.he5"
           }
         ]
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Manish's Fantastic Dump",
+      "properties": {
+        "manishsfantasticdump.ncdumpPath": {
+          "type": "string",
+          "default": "ncdump",
+          "markdownDescription": "Path to the `ncdump` executable. Set this to a full path (e.g. `~/miniconda3/bin/ncdump`) if VS Code can't find it on its `PATH`, which often happens with conda installs when VS Code is opened from the Dock.",
+          "scope": "machine-overridable"
+        },
+        "manishsfantasticdump.ncviewPath": {
+          "type": "string",
+          "default": "ncview",
+          "markdownDescription": "Path to the `ncview` executable used by **Open in Ncview**.",
+          "scope": "machine-overridable"
+        }
+      }
+    }
   },
   "activationEvents": [
-    "onCustomEditor:netcdf.viewer"
+    "onCustomEditor:netcdf.viewer",
+    "onCustomEditor:netcdf.viewer.optional",
+    "onCommand:extension.openInNcview"
   ],
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -70,8 +119,8 @@
     "@types/vscode": "^1.50.0",
     "@typescript-eslint/eslint-plugin": "^8.10.0",
     "@typescript-eslint/parser": "^8.7.0",
-    "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.1.0",
     "@vscode/vsce": "^4.1.0",
     "eslint": "^9.13.0",
     "typescript": "^5.6.3"

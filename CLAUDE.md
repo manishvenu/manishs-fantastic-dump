@@ -1,32 +1,35 @@
 # Manish's Fantastic Dump — VSCode Extension
 
-A VSCode custom editor that shows NetCDF file metadata inline using the system `ncdump`, with a file summary card, clickable variables (opening a paginated data panel), in-page search, and optional ncview integration.
+A VSCode custom editor that shows NetCDF file metadata inline using the system `ncdump`, with a file summary card, clickable variables with attribute tooltips (opening a paginated data panel), in-page search, live refresh, and optional ncview integration.
 
 ## Architecture
 
-The extension registers a `CustomReadonlyEditorProvider` (`netcdf.viewer`) for `*.nc` and `*.nc4` files. Opening a file shells out to `ncdump` and renders the output into a webview.
+The extension registers one `CustomReadonlyEditorProvider` under two view types: `netcdf.viewer` (default for `*.nc`, `*.nc3`, `*.nc4`, `*.netcdf`) and `netcdf.viewer.optional` (`priority: option` for `*.cdf`, `*.h5`, `*.hdf5`, `*.he5`, which other tools also claim). Opening a file runs `ncdump` and renders the output into a webview.
 
 **Key files:**
-- [src/extension.ts](src/extension.ts) — Everything host-side: activation, the `NetCDFViewer` provider, the `extension.openInNcview` command, `ncdump` wrappers, the variable panel, summary parsing, `escapeHtml`
+- [src/extension.ts](src/extension.ts) — VSCode glue: activation, settings, the `NetCDFViewer` provider (render, refresh, messages), the `extension.openInNcview` command, variable panels
+- [src/ncdump.ts](src/ncdump.ts) — Everything that doesn't need `vscode`: running `ncdump` (always via `execFile`/`spawn` with argument arrays, never a shell), `renderHeader` (parses CDL, links declarations), `extractVariableData`, summary formatting, escaping, `findExecutable`, `shellQuote`. Keep it free of `vscode` imports so the tests can load it
 - [src/NetCDFViewer.html](src/NetCDFViewer.html) — Main webview template
 - [src/VariableViewer.html](src/VariableViewer.html) — Variable data panel template
-- [src/variableClick.js](src/variableClick.js) — Defines `addVariableClickListeners()`; posts `variableClick` messages. Owns the single `acquireVsCodeApi()` call
-- [src/search.js](src/search.js) — Cmd/Ctrl+F search; must load after `variableClick.js` because it calls `addVariableClickListeners()` after resetting `innerHTML`
-- [src/variableViewer.js](src/variableViewer.js) — Pagination (prev/next buttons, arrow and PageUp/PageDown keys)
+- [src/variableClick.js](src/variableClick.js) — Defines `addVariableClickListeners()`; posts `{ command: 'variableClick', variablePath, cdlName }`. Owns the main view's single `acquireVsCodeApi()` call
+- [src/search.js](src/search.js) — Cmd/Ctrl+F plain-text search (marks built with DOM nodes, never `innerHTML` from text) and the `update` message handler for live refresh; must load after `variableClick.js` because it calls `addVariableClickListeners()` after resetting `innerHTML`
+- [src/variableViewer.js](src/variableViewer.js) — Pagination (prev/next buttons, arrow and PageUp/PageDown keys) and the Copy name button (posts `copy` to the host)
 - [src/style.css](src/style.css), [src/variableViewer.css](src/variableViewer.css) — Styles, dark mode via `prefers-color-scheme`
-- [src/test/extension.test.ts](src/test/extension.test.ts) — Still the generator's sample test; nothing real is tested
+- [src/test/ncdump.test.ts](src/test/ncdump.test.ts) — Unit tests for parsing, extraction and helpers; [src/test/extension.test.ts](src/test/extension.test.ts) checks activation
 
-**Templating:** HTML templates are read from disk and filled with plain `String.replace` on exact strings. `WEBVIEW_CSP_PLACEHOLDER`, `VARIABLE_NAME_PLACEHOLDER` and `PAGES_JSON_PLACEHOLDER` are substituted, and each `src="src/..."` / `href="src/..."` tag is swapped for its `asWebviewUri` equivalent. If you edit a `<script>`/`<link>` tag in a template, update the matching replace in `extension.ts` or the asset silently stops loading. Each webview sets a strict CSP (`default-src 'none'`, scripts and styles only from `cspSource`), so no inline scripts or `style` attributes from the host side.
+**Templating:** HTML templates are read from disk and filled with `String.replace` on exact strings, always with a function as the replacement so `$&`-style patterns in file metadata are inserted literally. `WEBVIEW_CSP_PLACEHOLDER`, `VARIABLE_NAME_PLACEHOLDER` and `PAGES_JSON_PLACEHOLDER` are substituted, and each `src="src/..."` / `href="src/..."` tag is swapped for its `asWebviewUri` equivalent. If you edit a `<script>`/`<link>` tag in a template, update the matching replace in `extension.ts` or the asset silently stops loading. Each webview sets a strict CSP (`default-src 'none'`, scripts and styles only from `cspSource`), so no inline scripts or `style` attributes from the host side.
 
 **Data flow:**
 1. `resolveCustomEditor()` shows "Loading...", then runs `ncdump -h`, `ncdump -k` and a file `stat` in parallel
-2. Output is HTML-escaped; `word(` patterns that aren't NetCDF type keywords (`NC_TYPES`) are wrapped in `<span class="variable">`
+2. `renderHeader()` walks the CDL line by line, tracking `variables:`/`dimensions:` sections and `group: x {` nesting. Only declaration lines in `variables:` sections are linked, as `<span class="variable" data-var="/group/path" title="declaration + attributes">`. Everything else is HTML-escaped
 3. A summary card (format, variable count, dimension count, size) is prepended and the page is set as `webview.html`
-4. A variable click posts `{ command: 'variableClick', variableName }`
-5. `runNcdumpVariable()` spawns `ncdump -v <var> <path>` (no shell), streams stdout and stops at `MAX_VARIABLE_BYTES` (10 MB), keeping only the text after `data:`
-6. `openVariablePanel()` splits it into `LINES_PER_PAGE` (500) line pages, escapes each one, and embeds them as JSON in a new side panel
+4. A variable click posts `variablePath` (real, group-qualified name for `ncdump -v`) and `cdlName` (name as printed, with backslash escapes)
+5. `runNcdumpVariable()` spawns `ncdump -v <path> <file>`, streams stdout and stops at `MAX_VARIABLE_BYTES` (10 MB). `extractVariableData()` finds the `<cdlName> =` line after the first `data:` line, since ncdump prints a `data:` section in every group
+6. `NetCDFViewer.showVariable()` splits it into `LINES_PER_PAGE` (500) line pages and embeds them as JSON. Panels are kept in a map keyed by file + variable and reused on repeat clicks
 
-A `FileSystemWatcher` re-runs the whole render on `onDidChange` / `onDidCreate`.
+A `FileSystemWatcher` (a `RelativePattern` so it works outside the workspace) schedules a refresh 300 ms after the last change. After the first successful load, refreshes post `{ command: 'update', summaryHtml, contentHtml }` instead of replacing `webview.html`, so scroll and search survive. A refresh that fails keeps the old content; stale renders are dropped via `renderId`.
+
+**Settings:** `manishsfantasticdump.ncdumpPath` and `manishsfantasticdump.ncviewPath` (both accept `~`), read on every use so changes apply without reloading.
 
 ## Build & Run
 
@@ -50,19 +53,16 @@ Then upload the `.vsix` by hand at https://marketplace.visualstudio.com/manage (
 
 ## Runtime Requirements
 
-These must be on the `PATH` that VSCode itself sees. When VSCode is launched from the Dock, that path may not include conda environments.
+These must be on the `PATH` that VSCode itself sees, or set in the settings above. When VSCode is launched from the Dock, that path may not include conda environments.
 - `ncdump` — NetCDF-C (`brew install netcdf` / `conda install netcdf4`)
 - `ncview` — optional, for the Explorer context menu "Open in Ncview" (`brew install ncview`)
 
 ## Known Bugs & Sharp Edges
 
-- **Shell strings for `ncdump -h` / `-k`**: `runNcdump` and `runNcdumpKind` use `exec` with the path in double quotes. A filename containing `"`, `$` or a backtick breaks out of the quotes. Use `execFile`/`spawn` with an argument array, as `runNcdumpVariable` does. The ncview command's `terminal.sendText` has the same problem.
-- **Search re-injects unescaped text**: `search.js` sets `wrapper.innerHTML` from `node.textContent`, which has already decoded `&lt;`/`&gt;`. A match in metadata containing `<` is parsed as markup. The query is also used as a raw regex, so `.` or `(` behave unexpectedly.
-- **`data:` split is fragile**: `runNcdumpVariable` takes the text after the first `data:`. An attribute value containing `data:` returns the wrong slice.
-- **Variable regex**: `\b(\w+)\b(?=\()` also matches `word(` inside attribute strings and misses names with characters outside `\w`. Variables inside NetCDF-4 groups need a group path for `ncdump -v`.
-- **Watcher**: no debounce, so a file being written can trigger several overlapping renders. Each render resets the page to "Loading...", losing scroll position and search state.
-- **ncview check**: uses `which`, which doesn't exist on Windows.
-- **Each variable click opens a new panel**: panels aren't reused per variable.
+- **Tests need a display**: `npm test` launches a real VSCode via `@vscode/test-cli`. Running mocha directly fails on Node 26 (an old yargs inside mocha), so there's no quick headless unit-test command yet.
+- **Variable names with commas**: `ncdump -v` takes a comma-separated list, so a variable whose name contains a comma can't be opened.
+- **Multi-line attribute values**: tooltips only show the first line of an attribute that ncdump wraps over several lines.
+- **Case-insensitive search uses `toLowerCase()`**, which can change string length for a few Unicode characters and shift a highlight.
 
 ## Repository Layout
 
@@ -74,5 +74,4 @@ package.json          Extension manifest (viewType, commands, menus, selectors)
 tsconfig.json         TypeScript config
 CHANGELOG.md          Version history (update every release)
 DeployExtension.md    Release steps (build .vsix, upload via Marketplace website)
-vsc-extension-quickstart.md   Generator boilerplate, safe to delete
 ```
