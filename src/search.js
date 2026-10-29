@@ -1,39 +1,52 @@
 // search.js
 
-document.getElementById('search-bar').style.display = 'none';
-
+const _searchBar = document.getElementById('search-bar');
+const _searchInput = document.getElementById('search-input');
 const _contentEl = document.getElementById('content');
-const _originalInnerHTML = _contentEl.innerHTML;
+let _originalInnerHTML = _contentEl.innerHTML;
+
+_searchBar.style.display = 'none';
 
 let currentIndex = 0;
 let matches = [];
 
-function _highlightTextNodes(node, regex) {
+// Plain-text, case-insensitive match. Builds <mark> elements with the DOM rather than innerHTML,
+// so text such as "<" in the file's metadata is never parsed as markup.
+function _highlightTextNodes(node, needle) {
     if (node.nodeType === Node.TEXT_NODE) {
-        regex.lastIndex = 0;
-        if (regex.test(node.textContent)) {
-            regex.lastIndex = 0;
-            const wrapper = document.createElement('span');
-            wrapper.innerHTML = node.textContent.replace(regex, m => `<mark class="highlight">${m}</mark>`);
-            node.parentNode.replaceChild(wrapper, node);
+        const text = node.textContent;
+        const lower = text.toLowerCase();
+        let index = lower.indexOf(needle);
+        if (index === -1) {
+            return;
         }
+        const fragment = document.createDocumentFragment();
+        let last = 0;
+        while (index !== -1) {
+            fragment.appendChild(document.createTextNode(text.slice(last, index)));
+            const mark = document.createElement('mark');
+            mark.className = 'highlight';
+            mark.textContent = text.slice(index, index + needle.length);
+            fragment.appendChild(mark);
+            last = index + needle.length;
+            index = lower.indexOf(needle, last);
+        }
+        fragment.appendChild(document.createTextNode(text.slice(last)));
+        node.parentNode.replaceChild(fragment, node);
     } else {
-        Array.from(node.childNodes).forEach(child => _highlightTextNodes(child, regex));
+        Array.from(node.childNodes).forEach(child => _highlightTextNodes(child, needle));
     }
 }
 
-function highlightMatches(query) {
-    const content = document.getElementById('content');
-    content.innerHTML = _originalInnerHTML;
+function highlightMatches(query, scroll = true) {
+    _contentEl.innerHTML = _originalInnerHTML;
     addVariableClickListeners();
-    let regex;
-    try { regex = new RegExp(query, 'gi'); } catch { return; }
-    _highlightTextNodes(content, regex);
+    _highlightTextNodes(_contentEl, query.toLowerCase());
 
     matches = Array.from(document.querySelectorAll('.highlight'));
     currentIndex = 0;
 
-    if (matches.length) {
+    if (matches.length && scroll) {
         scrollToMatch();
     }
 }
@@ -48,32 +61,28 @@ function scrollToMatch() {
 }
 
 function clearHighlights() {
-    const content = document.getElementById('content');
-    content.innerHTML = _originalInnerHTML;
+    _contentEl.innerHTML = _originalInnerHTML;
     addVariableClickListeners();
     matches = [];
 }
 
-document.getElementById('next-btn').addEventListener('click', () => {
+function step(direction) {
     if (matches.length) {
-        currentIndex = (currentIndex + 1) % matches.length;
+        currentIndex = (currentIndex + direction + matches.length) % matches.length;
         scrollToMatch();
     }
-});
+}
 
-document.getElementById('prev-btn').addEventListener('click', () => {
-    if (matches.length) {
-        currentIndex = (currentIndex - 1 + matches.length) % matches.length;
-        scrollToMatch();
-    }
-});
-
-document.getElementById('close-btn').addEventListener('click', () => {
-    document.getElementById('search-bar').style.display = 'none';
+function closeSearch() {
+    _searchBar.style.display = 'none';
     clearHighlights();
-});
+}
 
-document.getElementById('search-input').addEventListener('input', (e) => {
+document.getElementById('next-btn').addEventListener('click', () => step(1));
+document.getElementById('prev-btn').addEventListener('click', () => step(-1));
+document.getElementById('close-btn').addEventListener('click', closeSearch);
+
+_searchInput.addEventListener('input', (e) => {
     const query = e.target.value.trim();
     if (query) {
         highlightMatches(query);
@@ -86,16 +95,38 @@ window.addEventListener('keydown', (e) => {
     // Check for Ctrl (Windows/Linux) or Command (Mac)
     if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         e.preventDefault();
-        document.getElementById('search-bar').style.display = 'block';
-        document.getElementById('search-input').focus();
+        _searchBar.style.display = 'block';
+        _searchInput.focus();
+        _searchInput.select();
     }
 
-    // Add Enter key listener to go to the next match
-    if (e.key === 'Enter' && document.getElementById('search-input').value.trim()) {
-        if (matches.length) {
-            currentIndex = (currentIndex + 1) % matches.length;
-            scrollToMatch();
-        }
+    if (_searchBar.style.display === 'none') {
+        return;
+    }
+    if (e.key === 'Escape') {
+        closeSearch();
+    }
+    // Enter for next match, Shift+Enter for previous
+    if (e.key === 'Enter' && _searchInput.value.trim()) {
+        step(e.shiftKey ? -1 : 1);
     }
 });
 
+// The extension posts fresh output when the file changes on disk; swap it in without reloading the page
+window.addEventListener('message', (event) => {
+    const message = event.data;
+    if (message.command !== 'update') {
+        return;
+    }
+    const summary = document.querySelector('.file-summary');
+    if (summary) {
+        summary.outerHTML = message.summaryHtml;
+    }
+    _originalInnerHTML = message.contentHtml;
+    const query = _searchInput.value.trim();
+    if (query && _searchBar.style.display !== 'none') {
+        highlightMatches(query, false);
+    } else {
+        clearHighlights();
+    }
+});

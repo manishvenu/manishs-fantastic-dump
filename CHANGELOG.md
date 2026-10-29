@@ -2,6 +2,24 @@
 
 All notable changes to the "manishsfantasticdump" extension will be documented in this file.
 
+### [0.0.20] - 2026-10-29
+- Variables inside NetCDF-4 groups, scalar variables, and names with special characters are now clickable
+- Hover a variable to see its declaration and attributes
+- New settings `manishsfantasticdump.ncdumpPath` and `manishsfantasticdump.ncviewPath` for installs VS Code can't find on its PATH
+- Clearer error when `ncdump` can't be found
+- Open `.nc3` and `.netcdf` files by default; `.cdf`, `.h5`, `.hdf5` and `.he5` via "Reopen Editor With..."
+- Clicking a variable again reuses its panel
+- Refreshing after the file changes keeps scroll position and search, and waits for the file to finish writing
+- Search now matches plain text (Enter / Shift+Enter / Esc) and no longer treats metadata as HTML
+- "Open in Ncview" works before any NetCDF file has been opened
+- Fix: filenames containing quotes or `$` could run shell commands
+- Fix: words followed by "(" inside attribute text were shown as clickable variables
+- Fix: an attribute containing "data:" or "$&" could corrupt the display
+- Marketplace categories changed to Data Science and Visualization
+
+### [0.0.19] - 2026-10-29
+- Stream `ncdump -v` output so large variables open in the variable viewer
+
 ### [0.0.18] - 2026-06-02
 - Fix missing activation event for `.nc4` files
 - Show error message inside the webview when ncdump fails (instead of staying on "Loading...")
